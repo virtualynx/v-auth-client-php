@@ -1,6 +1,6 @@
 <?php
 
-namespace Bbt\Sso;
+namespace VLynx\Sso;
 
 class HttpClient {
     function __construct(){}
@@ -41,18 +41,7 @@ class HttpClient {
         return $response;
     }
 
-    private function set_proxy(){
-        // if(!empty($this->proxy)){
-        //     curl_setopt($curl, CURLOPT_PROXY, $this->proxy->proxy_url);
-        //     if(!empty($this->proxy->proxy_username)){
-        //         $proxyUsername = $this->proxy->proxy_username;
-        //         $proxyPassword = $this->proxy->proxy_password;
-        //         curl_setopt($curl, CURLOPT_PROXYUSERPWD, "$proxyUsername:$proxyPassword");
-        //     }
-        // }
-    }
-
-    public function get($url, $params, $headers = []){
+    public function get($url, $params = null, $headers = []){
         if(!empty($params)){
             // Check if URL already has query parameters
             $separator = (parse_url($url, PHP_URL_QUERY) == null) ? '?' : '&';
@@ -81,5 +70,16 @@ class HttpClient {
         $response = $this->run_curl($curl);
 
         return $response;
+    }
+
+    public function redirect($url, $params){
+        if(!empty($params)){
+            // Check if URL already has query parameters
+            $separator = (parse_url($url, PHP_URL_QUERY) == null) ? '?' : '&';
+            $url .= $separator . http_build_query($params);
+        }
+
+        header("Location: $url");
+        exit();
     }
 }
