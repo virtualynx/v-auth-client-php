@@ -2,6 +2,7 @@
 
 namespace VLynx\Sso;
 
+require_once "HttpUtil.php";
 require_once "HttpClient.php";
 
 /**
@@ -12,7 +13,7 @@ class VAuthSsoClient {
     private $client_id;
     private $client_secret;
     private $http_client;
-    private $client_base_uri;
+    private $server_dns_resolve;
 
     private const ACCESS_TOKEN_NAME = 'vauthat';
     private const REFRESH_TOKEN_NAME = 'vauthrt';
@@ -28,18 +29,18 @@ class VAuthSsoClient {
         $server_url, 
         $client_id, 
         $client_secret,
-        $client_base_uri = '/'
+        $server_dns_resolve = null
     ){
         $this->server_url = rtrim($server_url, '/');
         $this->client_id = $client_id;
         $this->client_secret = $client_secret;
         $this->http_client = new HttpClient();
-        $this->client_base_uri = $client_base_uri;
+        $this->server_dns_resolve = $server_dns_resolve;
     }
 
     function LoginPage($params = null){
         $verifier = self::GenerateRandomString(64);
-        setcookie('pkce_verifier', $verifier, time() + (60*60*24 * 3), '/', self::GetDomain(), false, true);
+        setcookie('pkce_verifier', $verifier, time() + (60*60*24 * 3), '/', HttpUtil::GetDomain(), false, true);
 
         $challenge = base64_encode(hash('sha256', $verifier));
         
@@ -96,7 +97,7 @@ class VAuthSsoClient {
     }
 
     private function _CallbackLogin($data){
-        $callback_url = self::GetCurrentUrl(true);
+        $callback_url = HttpUtil::GetCurrentUrl(true);
 
         if($data->login_method != 'google'){
             // if(!isset($_GET['code'])){
@@ -181,10 +182,10 @@ class VAuthSsoClient {
     }
 
     private function SetToken($data){
-        setcookie(self::ACCESS_TOKEN_NAME, $data->access_token, time() + (60*60*1), '/', self::GetDomain(), false, true);
+        setcookie(self::ACCESS_TOKEN_NAME, $data->access_token, time() + (60*60*1), '/', HttpUtil::GetDomain(), false, true);
 
         if(!empty($data->refresh_token)){
-            setcookie(self::REFRESH_TOKEN_NAME, $data->refresh_token, time() + (60*60*24 * 30), '/', self::GetDomain(), false, true);
+            setcookie(self::REFRESH_TOKEN_NAME, $data->refresh_token, time() + (60*60*24 * 30), '/', HttpUtil::GetDomain(), false, true);
         }
     }
 
@@ -203,7 +204,7 @@ class VAuthSsoClient {
             'client_id' => $this->client_id
         ];
         if($token_type == 'access'){
-            $params['redirect'] = self::GetCurrentUrl();
+            $params['redirect'] = HttpUtil::GetCurrentUrl();
         }
         if($token_type == 'refresh'){
             $params['refresh'] = 'true';
@@ -235,7 +236,7 @@ class VAuthSsoClient {
                 $params['refresh'] = 'true';
             }
 
-            $http = new HttpClient();
+            $http = new HttpClient($this->server_dns_resolve);
             $response = $http->get(
             // $response = $http->post(
                 "$this->server_url/token/info", 
@@ -292,7 +293,7 @@ class VAuthSsoClient {
     }
 
     public function RevokeTokens(){
-        $domain = self::GetDomain();
+        $domain = HttpUtil::GetDomain();
         setcookie(self::ACCESS_TOKEN_NAME, '', time()-1, '/', $domain, false, true);
         setcookie(self::REFRESH_TOKEN_NAME, '', time()-1, '/', $domain, false, true);
     }
@@ -356,7 +357,7 @@ class VAuthSsoClient {
             $data = json_decode(json_encode($data));
         }
 
-        $domain = self::GetDomain();
+        $domain = HttpUtil::GetDomain();
 
         $expires = time() + 60 * 60 * 12;
         $dateTime = new \DateTime();
@@ -373,59 +374,6 @@ class VAuthSsoClient {
             $refresh_token_name = self::REFRESH_TOKEN_NAME;
             header("Set-Cookie: $refresh_token_name=$data->refresh_token; $header_suffixes", false);
         }
-    }
-
-    private static function GetDomain() {
-        $host = $_SERVER['HTTP_HOST'] ?? '';
-        $host = preg_replace('/:\d+$/', '', $host); // Remove port
-        
-        // Handle localhost and IP addresses
-        if ($host === 'localhost' || filter_var($host, FILTER_VALIDATE_IP)) {
-            return $host;
-        }
-        
-        // Handle special cases like .co.uk, .com.br, etc.
-        $specialTlds = [
-            'co.uk', 'com.br', 'co.jp', 'co.in', 'co.za', 
-            'org.uk', 'net.br', 'gov.br', 'ac.uk', 'test',
-            'localhost.local'
-        ];
-        
-        // Check for special TLDs first
-        foreach ($specialTlds as $tld) {
-            if (preg_match("/\.{$tld}$/", $host)) {
-                // For special TLDs, we need three parts (e.g., "bbc.co.uk")
-                $parts = explode('.', $host);
-                if (count($parts) >= 3) {
-                    return implode('.', array_slice($parts, -3));
-                }
-            }
-        }
-        
-        // Remove www. and other common subdomains
-        $host = preg_replace('/^(www|app|api|m)\./', '', $host);
-        
-        // Standard domain processing (get last two parts)
-        $parts = explode('.', $host);
-        if (count($parts) >= 2) {
-            return implode('.', array_slice($parts, -2));
-        }
-        
-        return '.'.$host; // fallback
-    }
-
-    private static function GetCurrentUrl($strip_params = false){
-        $scheme = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http';
-        $host = $_SERVER['HTTP_HOST'];
-        $uri = $_SERVER['REQUEST_URI'];
-        $currentUrl = "$scheme://$host$uri";
-
-        if($strip_params){
-            $url_param_array = explode('?', $currentUrl);
-            $currentUrl = $url_param_array[0];
-        }
-
-        return $currentUrl;
     }
     
 	private static function GenerateRandomString($length){

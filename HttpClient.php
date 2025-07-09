@@ -2,43 +2,13 @@
 
 namespace VLynx\Sso;
 
+require_once "HttpUtil.php";
+
 class HttpClient {
-    function __construct(){}
+    private $dns_resolve = null;
 
-    private function init_curl($url, $headers = []){
-        $curl = curl_init($url);
-        
-        curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($curl, CURLOPT_FAILONERROR, false);
-        curl_setopt($curl, CURLOPT_CONNECTTIMEOUT, 30);
-        curl_setopt($curl, CURLOPT_TIMEOUT, 60);
-
-        if(!empty($headers)){
-            curl_setopt($curl, CURLOPT_HTTPHEADER, $headers);
-        }
-
-        return $curl;
-    }
-
-    private function run_curl($curl){
-        $response = curl_exec($curl);
-        $http_resp_code = curl_getinfo($curl, CURLINFO_RESPONSE_CODE);
-        
-        $error_no = '';
-        $error_msg = '';
-        if(($error_no = curl_errno($curl))) {
-            $error_msg = curl_error($curl);
-        }
-        curl_close($curl);
-
-        if($http_resp_code >= 400){
-            $msg = !empty($response)? $response: $error_msg;
-            throw new \Exception($msg, $http_resp_code);
-        }else if($error_no != 0){
-            throw new \Exception($error_msg, $error_no);
-        }
-
-        return $response;
+    function __construct($dns_resolve = null){
+        $this->dns_resolve = $dns_resolve;
     }
 
     public function get($url, $params = null, $headers = []){
@@ -68,6 +38,50 @@ class HttpClient {
         }
         
         $response = $this->run_curl($curl);
+
+        return $response;
+    }
+
+    private function init_curl($url, $headers = []){
+        $curl = curl_init($url);
+        
+        curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($curl, CURLOPT_FAILONERROR, false);
+        curl_setopt($curl, CURLOPT_CONNECTTIMEOUT, 30);
+        curl_setopt($curl, CURLOPT_TIMEOUT, 60);
+
+        if(!empty($headers)){
+            curl_setopt($curl, CURLOPT_HTTPHEADER, $headers);
+        }
+
+        if(!empty($this->dns_resolve)){
+            $host = $_SERVER['HTTP_HOST'] ?? $_SERVER['SERVER_NAME'] ?? '';
+            curl_setopt($curl, CURLOPT_RESOLVE, ["$host:$this->dns_resolve"]);
+
+            // $domainAndPort = HttpUtil::getDomainAndPort($host);
+            // curl_setopt($curl, CURLOPT_RESOLVE, ["$domainAndPort:$this->dns_resolve"]);
+        }
+
+        return $curl;
+    }
+
+    private function run_curl($curl){
+        $response = curl_exec($curl);
+        $http_resp_code = curl_getinfo($curl, CURLINFO_RESPONSE_CODE);
+        
+        $error_no = '';
+        $error_msg = '';
+        if(($error_no = curl_errno($curl))) {
+            $error_msg = curl_error($curl);
+        }
+        curl_close($curl);
+
+        if($http_resp_code >= 400){
+            $msg = !empty($response)? $response: $error_msg;
+            throw new \Exception($msg, $http_resp_code);
+        }else if($error_no != 0){
+            throw new \Exception($error_msg, $error_no);
+        }
 
         return $response;
     }
