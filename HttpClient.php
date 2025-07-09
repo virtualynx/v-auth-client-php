@@ -54,13 +54,13 @@ class HttpClient {
             curl_setopt($curl, CURLOPT_HTTPHEADER, $headers);
         }
 
-        if(!empty($this->dns_resolve)){
-            $host = $_SERVER['HTTP_HOST'] ?? $_SERVER['SERVER_NAME'] ?? '';
-            curl_setopt($curl, CURLOPT_RESOLVE, ["$host:$this->dns_resolve"]);
+        // if(!empty($this->dns_resolve)){
+        //     $host = $_SERVER['HTTP_HOST'] ?? $_SERVER['SERVER_NAME'] ?? '';
+        //     curl_setopt($curl, CURLOPT_RESOLVE, ["$host:$this->dns_resolve"]);
 
-            // $domainAndPort = HttpUtil::getDomainAndPort($host);
-            // curl_setopt($curl, CURLOPT_RESOLVE, ["$domainAndPort:$this->dns_resolve"]);
-        }
+        //     // $domainAndPort = HttpUtil::getDomainAndPort($host);
+        //     // curl_setopt($curl, CURLOPT_RESOLVE, ["$domainAndPort:$this->dns_resolve"]);
+        // }
 
         return $curl;
     }

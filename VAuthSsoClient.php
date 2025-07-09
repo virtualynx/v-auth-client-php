@@ -13,7 +13,7 @@ class VAuthSsoClient {
     private $client_id;
     private $client_secret;
     private $http_client;
-    private $server_dns_resolve;
+    private $server_url_local;
 
     private const ACCESS_TOKEN_NAME = 'vauthat';
     private const REFRESH_TOKEN_NAME = 'vauthrt';
@@ -29,13 +29,13 @@ class VAuthSsoClient {
         $server_url, 
         $client_id, 
         $client_secret,
-        $server_dns_resolve = null
+        $server_url_local = null
     ){
         $this->server_url = rtrim($server_url, '/');
         $this->client_id = $client_id;
         $this->client_secret = $client_secret;
         $this->http_client = new HttpClient();
-        $this->server_dns_resolve = $server_dns_resolve;
+        $this->server_url_local = $server_url_local;
     }
 
     function LoginPage($params = null){
@@ -81,12 +81,14 @@ class VAuthSsoClient {
             ];
         }else if($action == 'auth_code_response'){
             throw new \Exception('Yet to be implemented');
-        }else if($action == 'token_info'){
+        }
+        /*else if($action == 'token_info'){
             return [
                 'action' => 'token_info',
                 'data' => self::_CallbackTokenInfo($data)
             ];
-        }else{
+        }*/
+        else{
             throw new \Exception('Invalid action');
         }
 
@@ -97,8 +99,6 @@ class VAuthSsoClient {
     }
 
     private function _CallbackLogin($data){
-        $callback_url = HttpUtil::GetCurrentUrl(true);
-
         if($data->login_method != 'google'){
             // if(!isset($_GET['code'])){
             //     throw new \Exception('Missing "code"');
@@ -155,72 +155,8 @@ class VAuthSsoClient {
         return $data->user;
     }
 
-    private function _CallbackTokenInfo($data){
-        if($data->status != 'success'){
-
-        }
-
-        if(!empty($data->message)){
-            if($data->message == 'Expired token'){
-                $this->AuthCheck('refresh');
-            }else{
-                $this->RevokeTokens();
-
-                $loginParams = ['alert' => $data->message];
-                if(!empty($_SERVER['HTTP_REFERER'])){
-                    $loginParams['redirect'] = $_SERVER['HTTP_REFERER'];
-                }
-                $this->LoginPage($loginParams);
-            }
-        }
-
-        if(!empty($data->tokens)){
-            $this->SetToken($data->tokens);
-        }
-
-        return $data->payload;
-    }
-
-    private function SetToken($data){
-        setcookie(self::ACCESS_TOKEN_NAME, $data->access_token, time() + (60*60*1), '/', HttpUtil::GetDomain(), false, true);
-
-        if(!empty($data->refresh_token)){
-            setcookie(self::REFRESH_TOKEN_NAME, $data->refresh_token, time() + (60*60*24 * 30), '/', HttpUtil::GetDomain(), false, true);
-        }
-    }
-
     /**
-     * Call this to check the validity of the tokens and SSO's shared-session
-     */
-    function AuthCheck_redirect($token_type = 'access'){
-        if(!in_array($token_type, ['access', 'refresh'])){
-            throw new \Exception("Invalid token_type: $token_type");
-        }
-
-        $token = self::GetToken($token_type);
-
-        $params = [
-            'token' => $token,
-            'client_id' => $this->client_id
-        ];
-        if($token_type == 'access'){
-            $params['redirect'] = HttpUtil::GetCurrentUrl();
-        }
-        if($token_type == 'refresh'){
-            $params['refresh'] = 'true';
-            $params['redirect'] = $_GET['redirect'];
-        }
-
-        // $redirect_url = "$this->server_url/token/info?".(http_build_query($params));
-
-        // header("Location: $redirect_url");
-        // exit();
-
-        $http = new HttpClient();
-        $http->redirect("$this->server_url/token/info", $params);
-    }
-
-    /**
+     * if both client and server is on the same instance (server)
      * laravel's connection from the calling apps carry over to the SSO server thus -
      * causing unknown table name since its using the calling-app's database connection
      */
@@ -236,10 +172,11 @@ class VAuthSsoClient {
                 $params['refresh'] = 'true';
             }
 
-            $http = new HttpClient($this->server_dns_resolve);
+            $server_url = $this->GetServerUrl();
+            $http = new HttpClient();
             $response = $http->get(
             // $response = $http->post(
-                "$this->server_url/token/info", 
+                "$server_url/token/info", 
                 $params, 
                 [
                     'Cache-Control: no-cache, no-store',
@@ -379,4 +316,73 @@ class VAuthSsoClient {
 	private static function GenerateRandomString($length){
 		return bin2hex(random_bytes(($length-($length%2))/2));
 	}
+    
+    private function GetServerUrl(){
+        return $this->server_url_local ?? $this->server_url;
+    }
+
+    // private function _CallbackTokenInfo($data){
+    //     if($data->status != 'success'){
+
+    //     }
+
+    //     if(!empty($data->message)){
+    //         if($data->message == 'Expired token'){
+    //             $this->AuthCheck('refresh');
+    //         }else{
+    //             $this->RevokeTokens();
+
+    //             $loginParams = ['alert' => $data->message];
+    //             if(!empty($_SERVER['HTTP_REFERER'])){
+    //                 $loginParams['redirect'] = $_SERVER['HTTP_REFERER'];
+    //             }
+    //             $this->LoginPage($loginParams);
+    //         }
+    //     }
+
+    //     if(!empty($data->tokens)){
+    //         $this->SetToken($data->tokens);
+    //     }
+
+    //     return $data->payload;
+    // }
+
+    // private function SetToken($data){
+    //     setcookie(self::ACCESS_TOKEN_NAME, $data->access_token, time() + (60*60*1), '/', HttpUtil::GetDomain(), false, true);
+
+    //     if(!empty($data->refresh_token)){
+    //         setcookie(self::REFRESH_TOKEN_NAME, $data->refresh_token, time() + (60*60*24 * 30), '/', HttpUtil::GetDomain(), false, true);
+    //     }
+    // }
+
+    /**
+     * Call this to check the validity of the tokens and SSO's shared-session
+     */
+    // function AuthCheck_redirect($token_type = 'access'){
+    //     if(!in_array($token_type, ['access', 'refresh'])){
+    //         throw new \Exception("Invalid token_type: $token_type");
+    //     }
+
+    //     $token = self::GetToken($token_type);
+
+    //     $params = [
+    //         'token' => $token,
+    //         'client_id' => $this->client_id
+    //     ];
+    //     if($token_type == 'access'){
+    //         $params['redirect'] = HttpUtil::GetCurrentUrl();
+    //     }
+    //     if($token_type == 'refresh'){
+    //         $params['refresh'] = 'true';
+    //         $params['redirect'] = $_GET['redirect'];
+    //     }
+
+    //     // $redirect_url = "$this->server_url/token/info?".(http_build_query($params));
+
+    //     // header("Location: $redirect_url");
+    //     // exit();
+
+    //     $http = new HttpClient();
+    //     $http->redirect("$this->server_url/token/info", $params);
+    // }
 }
