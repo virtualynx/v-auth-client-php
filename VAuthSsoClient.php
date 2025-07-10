@@ -23,7 +23,8 @@ class VAuthSsoClient {
         'Missing refresh_token',
         'Expired session'
     ];
-    private const MSG_SESSION_EXPIRED = 'Your session is expired, please login again !';
+    // private const MSG_SESSION_EXPIRED = 'Your session is expired, please login again !';
+    private const MSG_SESSION_EXPIRED = 'Waktu sesi telah berakhir, silahkan login kembali !';
 
     function __construct(
         $server_url, 
@@ -215,10 +216,13 @@ class VAuthSsoClient {
                         $result = $e->getMessage();
                     }
 
-                    $loginParams = ['alert' => $alert];
-                    if(!empty($_SERVER['HTTP_REFERER'])){
-                        $loginParams['redirect'] = $_SERVER['HTTP_REFERER'];
-                    }
+                    $test = HttpUtil::GetCurrentUrl();
+
+                    $loginParams = [
+                        'alert' => $alert,
+                        'redirect' => HttpUtil::GetCurrentUrl()
+                    ];
+
                     $this->LoginPage($loginParams);
                 }
 
@@ -227,6 +231,24 @@ class VAuthSsoClient {
                 throw $e;
             }
         }
+    }
+
+    public function UserInfo(){
+        $server_url = $this->GetServerUrl();
+        $http = new HttpClient();
+        $response = $http->get(
+            "$server_url/user/info", 
+            null, 
+            [
+                'Cache-Control: no-cache, no-store',
+                'Authorization: Bearer '.self::GetToken('refresh'),
+                'Client-id: '.$this->client_id
+            ]
+        );
+
+        $response = json_decode($response, true);
+
+        return $response['data'];
     }
 
     public function RevokeTokens(){
