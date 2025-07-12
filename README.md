@@ -8,7 +8,7 @@ PHP (8.2^) client for v-auth authentication system.
 First, add this repository as a submodule in your Laravel project (e.g: under path "app/Library/v-auth-client-php"):
 
 ```bash
-git submodule add https://github.com/your-repo/v-auth-client-php.git app/Library/v-auth-client-php
+git submodule add https://github.com/virtualynx/v-auth-client-php.git app/Library/v-auth-client-php
 ```
 ### 2. Autoload
 Add the following configuration to your `composer.json`:
