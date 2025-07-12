@@ -163,7 +163,7 @@ class VAuthSsoClient {
      * laravel's connection from the calling apps carry over to the SSO server thus -
      * causing unknown table name since its using the calling-app's database connection
      */
-    function AuthCheck($token_type = 'access'){
+    function AuthCheck($token_type = 'access', $redirect_login_upon_fail = true){
         try{
             if(!in_array($token_type, ['access', 'refresh'])){
                 throw new \Exception("Invalid token_type: $token_type");
@@ -202,30 +202,31 @@ class VAuthSsoClient {
 
                 if($e->getMessage() == 'Expired token'){ //token is expired
                     if($token_type == 'access'){
-                        $is_valid = $this->AuthCheck('refresh');
+                        $is_valid = $this->AuthCheck('refresh', $redirect_login_upon_fail);
                     }
                 }
 
                 if(!$is_valid){
                     $this->RevokeTokens();
-                    $alert = '';
-                    $result = null;
-                    if(in_array($e->getMessage(), self::SILENT_LOGOUT_REASONS)){
-                        $alert = self::MSG_SESSION_EXPIRED;
-                        $result = false;
-                    }else{
-                        $alert = $e->getMessage();
-                        $result = $e->getMessage();
+
+                    if($redirect_login_upon_fail){
+                        $alert = '';
+                        if(
+                            ($token_type == 'refresh' && $e->getMessage() == 'Expired token') ||
+                            in_array($e->getMessage(), self::SILENT_LOGOUT_REASONS)
+                        ){
+                            $alert = self::MSG_SESSION_EXPIRED;
+                        }else{
+                            $alert = $e->getMessage();
+                        }
+
+                        $loginParams = [
+                            'alert' => $alert,
+                            'redirect' => HttpUtil::GetCurrentUrl()
+                        ];
+
+                        $this->LoginPage($loginParams);
                     }
-
-                    $test = HttpUtil::GetCurrentUrl();
-
-                    $loginParams = [
-                        'alert' => $alert,
-                        'redirect' => HttpUtil::GetCurrentUrl()
-                    ];
-
-                    $this->LoginPage($loginParams);
                 }
 
                 return $is_valid;
