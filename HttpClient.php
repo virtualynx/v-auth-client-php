@@ -78,6 +78,9 @@ class HttpClient {
 
         if($http_resp_code >= 400){
             $msg = !empty($response)? $response: $error_msg;
+            if($http_resp_code == 500){
+                $msg = $this->formatErrorOutput($msg);
+            }
             throw new \Exception($msg, $http_resp_code);
         }else if($error_no != 0){
             throw new \Exception($error_msg, $error_no);
@@ -95,5 +98,58 @@ class HttpClient {
 
         header("Location: $url");
         exit();
+    }
+
+    /**
+     * Clean error message and return first meaningful lines with original newlines
+     */
+    private function formatErrorOutput(string $message, int $maxLines = 50): string {
+        if (empty($message)) {
+            return '';
+        }
+
+        // Remove all HTML tags including content of style/script/link
+        $clean = preg_replace([
+            '/<style\b[^>]*>(.*?)<\/style>/is',
+            '/<script\b[^>]*>(.*?)<\/script>/is',
+            '/<link\b[^>]*>.*?<\/link>/is',
+            '/<link\b[^>]*\/?>/i',
+            '/<!--.*?-->/s'
+        ], '', $message);
+        
+        // Strip remaining HTML tags
+        $clean = strip_tags($clean);
+        
+        // Decode HTML entities
+        $clean = html_entity_decode($clean, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        
+        // Normalize newlines to \n
+        $clean = str_replace(["\r\n", "\r"], "\n", $clean);
+        
+        // Split into lines and process
+        $lines = explode("\n", $clean);
+        $meaningfulLines = [];
+        $linesAdded = 0;
+        
+        foreach ($lines as $line) {
+            $trimmed = trim($line);
+            if (!empty($trimmed)) {
+                $meaningfulLines[] = $trimmed;
+                $linesAdded++;
+                if ($linesAdded >= $maxLines) {
+                    break;
+                }
+            }
+        }
+        
+        // Recombine with original newlines
+        $output = implode("\n", $meaningfulLines);
+        
+        // Add truncation notice if we cut content
+        if (count($lines) > $maxLines) {
+            $output .= "\n[...truncated...]";
+        }
+        
+        return $output;
     }
 }
