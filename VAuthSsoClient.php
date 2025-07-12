@@ -150,9 +150,11 @@ class VAuthSsoClient {
             throw new \Exception('Yet to be implemented');
         }
 
+        save_userinfo($data->user);
+
         // $this->SetToken($data->tokens);
         self::SaveTokens($data->tokens);
-        
+
         return $data->user;
     }
 
