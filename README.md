@@ -10,6 +10,12 @@ First, add this repository as a submodule in your Laravel project (e.g: under pa
 ```bash
 git submodule add https://github.com/virtualynx/v-auth-client-php.git app/Library/v-auth-client-php
 ```
+or
+```bash
+git submodule update --init --recursive
+```
+to re-init submodule in a repo that already include it
+
 ### 2. Autoload
 Add the following configuration to your `composer.json`:
 
