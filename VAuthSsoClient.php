@@ -351,7 +351,7 @@ class VAuthSsoClient {
 	}
     
     private function GetServerUrl(){
-        return $this->server_url_local ?? $this->server_url;
+        return !empty($this->server_url_local)? $this->server_url_local: $this->server_url;
     }
 
     // private function _CallbackTokenInfo($data){
