@@ -32,6 +32,14 @@ class VAuthSsoClient {
         $client_secret,
         $server_url_local = null
     ){
+        if(
+            empty($server_url) ||
+            empty($client_id) ||
+            empty($client_secret)
+        ){
+            throw new \Exception("server_url, client_id, and client_secret cannot be null");
+        }
+
         $this->server_url = rtrim($server_url, '/');
         $this->client_id = $client_id;
         $this->client_secret = $client_secret;
