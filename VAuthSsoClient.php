@@ -5,6 +5,8 @@ namespace VLynx\Sso;
 require_once "HttpUtil.php";
 require_once "HttpClient.php";
 
+require_once "helpers.php";
+
 /**
  * For PHP >= 5.4.0
  */
