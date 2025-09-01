@@ -5,8 +5,6 @@ namespace VLynx\Sso;
 require_once "HttpUtil.php";
 require_once "HttpClient.php";
 
-require_once "helpers.php";
-
 /**
  * For PHP >= 5.4.0
  */
@@ -259,9 +257,9 @@ class VAuthSsoClient {
             ]
         );
 
-        $response = json_decode($response, true);
+        $response = json_decode($response);
 
-        return $response['data'];
+        return $response->data;
     }
 
     public function RevokeTokens(){
