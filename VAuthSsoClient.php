@@ -245,21 +245,31 @@ class VAuthSsoClient {
     }
 
     public function UserInfo(){
-        $server_url = $this->GetServerUrl();
-        $http = new HttpClient();
-        $response = $http->get(
-            "$server_url/user/info", 
-            null, 
-            [
-                'Cache-Control: no-cache, no-store',
-                'Authorization: Bearer '.self::GetToken('refresh'),
-                'Client-id: '.$this->client_id
-            ]
-        );
+        $userinfo = null;
 
-        $response = json_decode($response);
+        try{
+            $server_url = $this->GetServerUrl();
+            $http = new HttpClient();
+            $response = $http->get(
+                "$server_url/user/info", 
+                null, 
+                [
+                    'Cache-Control: no-cache, no-store',
+                    'Authorization: Bearer '.self::GetToken('refresh'),
+                    'Client-id: '.$this->client_id
+                ]
+            );
 
-        return $response->data;
+            $response = json_decode($response);
+
+            $userinfo = $response->data;
+        }catch(\Exception $e){
+            if($e->getCode() != 401){
+                throw $e;
+            }
+        }
+
+        return $userinfo;
     }
 
     public function RevokeTokens(){
