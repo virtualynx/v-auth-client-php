@@ -12,6 +12,25 @@ if(!defined('V_AUTH_SESSION_USERINFO')){
 
 if (!function_exists('save_userinfo')) {
     function save_userinfo($data) {
+        
+        echo 'Session save path: ' . session_save_path();
+        echo '</br>';
+
+        // Check current setting
+        echo 'session.auto_start: ' . ini_get('session.auto_start');
+        echo '</br>';
+
+        // Check session status
+        echo 'status: '.session_status(); // Should return PHP_SESSION_ACTIVE (2)
+        echo '</br>';
+
+        // Check if session is started
+        echo 'started: '.session()->isStarted();
+        echo '</br>';
+
+        exit;
+
+
         return session()->put(V_AUTH_SESSION_USERINFO, $data);
     }
 }else{
