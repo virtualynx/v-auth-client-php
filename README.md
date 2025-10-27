@@ -36,7 +36,7 @@ Add the following configuration to your `composer.json`:
 ### 3. ENV Variables
 Add the following configuration to your `.env`:
 
-```json
+```
 SSO_SERVER_URL=https://yourdomain.com/v-auth/sso
 SSO_CLIENT_ID=efabcd01-2db8-4a4c-babc-f67172caec83
 SSO_CLIENT_SECRET=9f6b92b5-6a63-4349-8b1e-b57a7916d228
